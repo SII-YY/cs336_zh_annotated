@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPE分词器字典结构分析</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .dict-card {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .dict-header {
+            background-color: #3498db;
+            color: white;
+            padding: 10px;
+            margin: -15px -15px 15px -15px;
+            border-radius: 6px 6px 0 0;
+            font-weight: bold;
+        }
+        .key-value {
+            display: flex;
+            margin: 10px 0;
+        }
+        .key, .value {
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .key {
+            background-color: #e8f4fc;
+            min-width: 120px;
+            font-weight: bold;
+        }
+        .value {
+            background-color: #f0f8ff;
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+        code {
+            background-color: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .code-block {
+            background-color: #f8f8f8;
+            border-left: 4px solid #3498db;
+            padding: 10px 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .flow-chart {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .dict-box {
+            background-color: #e8f4fc;
+            border: 1px solid #3498db;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px auto;
+            width: 70%;
+            text-align: center;
+        }
+        .arrow {
+            margin: 10px 0;
+            font-size: 20px;
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BPE分词器字典结构分析</h1>
+        <p>深入理解代码中各种字典的键值区别与相互关系</p>
+
+        <div class="dict-card">
+            <div class="dict-header">vocab 字典</div>
+            <p><strong>类型:</strong> <code>dict[int, bytes]</code></p>
+            <p><strong>作用:</strong> 存储词汇表，将token ID映射到对应的字节表示</p>
+            <div class="key-value">
+                <div class="key">键 (Key)</div>
+                <div class="value">整数 (token ID)</div>
+            </div>
+            <div class="key-value">
+                <div class="key">值 (Value)</div>
+                <div class="value">字节序列</div>
+            </div>
+            <div class="code-block">
+                vocab = {i:bytes([i]) for i in range(256)}
+            </div>
+        </div>
+
+        <div class="dict-card">
+            <div class="dict-header">special_token_ids 字典</div>
+            <p><strong>类型:</strong> <code>dict[str, int]</code></p>
+            <p><strong>作用:</strong> 将特殊标记名称映射到其在词汇表中的ID</p>
+            <div class="key-value">
+                <div class="key">键 (Key)</div>
+                <div class="value">字符串 (特殊标记名称)</div>
+            </div>
+            <div class="key-value">
+                <div class="key">值 (Value)</div>
+                <div class="value">整数 (token ID)</div>
+            </div>
+            <div class="code-block">
+                special_token_ids["&lt;PAD&gt;"] = 256
+            </div>
+        </div>
+
+        <div class="dict-card">
+            <div class="dict-header">special_token_bytes 集合</div>
+            <p><strong>类型:</strong> <code>set[bytes]</code></p>
+            <p><strong>作用:</strong> 存储所有特殊标记的字节表示，用于快速查找</p>
+            <div class="key-value">
+                <div class="key">元素</div>
+                <div class="value">字节序列</div>
+            </div>
+            <div class="code-block">
+                special_token_bytes.add(b"&lt;PAD&gt;")
+            </div>
+        </div>
+
+        <div class="dict-card">
+            <div class="dict-header">is_special_token 字典</div>
+            <p><strong>类型:</strong> <code>dict[int, bool]</code></p>
+            <p><strong>作用:</strong> 快速判断一个token ID是否为特殊标记</p>
+            <div class="key-value">
+                <div class="key">键 (Key)</div>
+                <div class="value">整数 (token ID)</div>
+            </div>
+            <div class="key-value">
+                <div class="key">值 (Value)</div>
+                <div class="value">布尔值 (是否为特殊标记)</div>
+            </div>
+            <div class="code-block">
+                is_special_token[256] = True
+            </div>
+        </div>
+
+        <div class="dict-card">
+            <div class="dict-header">word_freq 字典</div>
+            <p><strong>类型:</strong> <code>dict[tuple[int], int]</code></p>
+            <p><strong>作用:</strong> 统计每个单词在语料库中出现的频率</p>
+            <div class="key-value">
+                <div class="key">键 (Key)</div>
+                <div class="value">元组 (单词的字节ID序列)</div>
+            </div>
+            <div class="key-value">
+                <div class="key">值 (Value)</div>
+                <div class="value">整数 (出现频率)</div>
+            </div>
+            <div class="code-block">
+                word_freq[(104, 101, 108, 108, 111)] = 5
+            </div>
+        </div>
+
+        <div class="dict-card">
+            <div class="dict-header">pairs 字典</div>
+            <p><strong>类型:</strong> <code>dict[tuple[int, int], int]</code></p>
+            <p><strong>作用:</strong> 统计相邻token对的频率，用于BPE合并决策</p>
+            <div class="key-value">
+                <div class="key">键 (Key)</div>
+                <div class="value">元组 (相邻的两个token ID)</div>
+            </div>
+            <div class="key-value">
+                <div class="key">值 (Value)</div>
+                <div class="value">整数 (该token对的出现频率)</div>
+            </div>
+            <div class="code-block">
+                pairs[(104, 101)] = 10
+            </div>
+        </div>
+
+        <h2>字典间的关系</h2>
+        <div class="flow-chart">
+            <div class="dict-box">
+                <strong>vocab</strong> (ID → bytes)
+            </div>
+            <div class="arrow">↓ (ID关联)</div>
+            <div class="dict-box">
+                <strong>special_token_ids</strong> (名称 → ID)
+            </div>
+            <div class="arrow">↓ (字节值)</div>
+            <div class="dict-box">
+                <strong>special_token_bytes</strong> (字节集合)
+            </div>
+            <div class="arrow">↓ (判断)</div>
+            <div class="dict-box">
+                <strong>is_special_token</strong> (ID → bool)
+            </div>
+        </div>
+        
+        <div class="flow-chart">
+            <div class="dict-box">
+                <strong>word_freq</strong> (单词ID序列 → 频率)
+            </div>
+            <div class="arrow">↓ (提取相邻对)</div>
+            <div class="dict-box">
+                <strong>pairs</strong> (token对 → 频率)
+            </div>
+        </div>
+
+        <h2>字典关键区别对比</h2>
+        <table>
+            <tr>
+                <th>字典名称</th>
+                <th>键类型</th>
+                <th>值类型</th>
+                <th>功能</th>
+                <th>生命周期</th>
+            </tr>
+            <tr>
+                <td><strong>vocab</strong></td>
+                <td>整数ID</td>
+                <td>字节序列</td>
+                <td>核心词汇表</td>
+                <td>持续更新</td>
+            </tr>
+            <tr>
+                <td><strong>special_token_ids</strong></td>
+                <td>字符串名称</td>
+                <td>整数ID</td>
+                <td>特殊标记映射</td>
+                <td>初始化后不变</td>
+            </tr>
+            <tr>
+                <td><strong>word_freq</strong></td>
+                <td>元组(单词序列)</td>
+                <td>频率计数</td>
+                <td>单词频率统计</td>
+                <td>每次BPE迭代后更新</td>
+            </tr>
+            <tr>
+                <td><strong>pairs</strong></td>
+                <td>元组(token对)</td>
+                <td>频率计数</td>
+                <td>BPE合并决策依据</td>
+                <td>每次BPE迭代重新计算</td>
+            </tr>
+        </table>
+
+        <h2>关键代码分析</h2>
+        <p>在代码第135行，<code>word_freq[word_tuple] = word_freq.get(word_tuple, 0) + 1</code> 这行代码实现了单词频率的统计：</p>
+        <ul>
+            <li><code>word_tuple</code> 是一个元组，表示单词的字节ID序列</li>
+            <li><code>word_freq.get(word_tuple, 0)</code> 获取当前单词的频率，如果不存在则返回0</li>
+            <li>然后将频率加1，更新字典中的值</li>
+            <li>这是字典操作的经典模式，用于统计元素出现频率</li>
+        </ul>
+        <p>这些字典共同构成了BPE分词器的核心数据结构，通过不同类型的键值映射实现了从文本到token序列的转换过程。</p>
+    </div>
+</body>
+</html>
