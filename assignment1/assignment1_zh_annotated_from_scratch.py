@@ -208,22 +208,71 @@ def train_bep_tokenizer(input_path:str, vocab_size:int, special_tokens:list[str]
     return vocab, merges # 返回词汇表和合并历史
 
 
+
+
+
+
 # 这里字典太多了，如果看得晕，参考一下dictionary_analysis_simple.html演示文件
 # 为了边写边测，我们先随便指定一些参数
-special_tokens = [ 
-    "<PAD>",   # 填充标记 - 用于补齐序列长度
-    "<UNK>",   # 未知词标记 - 用于处理未见过词汇
-    "<BOS>",   # 句子开始标记 - Beginning of Sentence  
-    "<EOS>",   # 句子结束标记 - End of Sentence
-    "<SEP>",   # 分隔符标记 - 用于分隔不同文本
-    "<MASK>",  # 掩码标记 - 用于遮盖词汇进行预测
-    "</w>",    # 单词结束标记 - End of Word
-]
-vocab_size = 300 # 我们先指定一个较小的大小，方便调试
-input_path = "../TinyStoriesV2-GPT4-valid.txt" #用这个小的数据集调试一下，避免跑崩
+# special_tokens = [ 
+#     "<PAD>",   # 填充标记 - 用于补齐序列长度
+#     "<UNK>",   # 未知词标记 - 用于处理未见过词汇
+#     "<BOS>",   # 句子开始标记 - Beginning of Sentence  
+#     "<EOS>",   # 句子结束标记 - End of Sentence
+#     "<SEP>",   # 分隔符标记 - 用于分隔不同文本
+#     "<MASK>",  # 掩码标记 - 用于遮盖词汇进行预测
+#     "</w>",    # 单词结束标记 - End of Word
+# ]
+# vocab_size = 300 # 我们先指定一个较小的大小，方便调试
+# input_path = "../TinyStoriesV2-GPT4-valid.txt" #用这个小的数据集调试一下，避免跑崩
 
-# 简单写个测试，看看是否能正常运行
-vocab, merges = train_bep_tokenizer(input_path, vocab_size, special_tokens)
+# # 简单写个测试，看看是否能正常运行
+# vocab, merges = train_bep_tokenizer(input_path, vocab_size, special_tokens)
 
-print(f"merges={merges}")
-print(f"vocab={vocab}")
+# print(f"merges={merges}")
+# print(f"vocab={vocab}")
+
+# ----day2-----
+
+'''
+将词汇表和合并历史保存到文件中
+'''
+def save_vocab_and_merges(vocab:dict[int, bytes], merges:list[tuple[bytes, bytes]],
+                            vocab_path: str, merges_path: str):
+
+    # 保存词汇表
+    with open(vocab_path, "w", encoding='utf-8' ) as f: 
+        for token_id, token_bytes in sorted(vocab.items()): # 按token_id排序，方便查看
+            """
+            - 虽然 vocab 中的 token_id 是按顺序添加的（0, 1, 2, 3...）
+            - 但字典的遍历顺序在不同Python版本或不同情况下可能不一致
+            - 为了确保按顺序输出，我们使用 sorted(vocab.items()) 来按 token_id 排序     
+            """
+            try: # 尝试将字节转换为字符串
+                token_str = token_bytes.decode("utf-8")
+                f.write(f"{token_id}\t{token_str}\t{token_bytes}\n") # \t是制表符，使用制表符可以让多列数据对齐，比用空格更整齐规范。
+            except UnicodeDecodeError: # 如果遇到无法解码的字节，用十六进制表示
+                f.write(f"{token_id}\t{token_bytes.hex()}\t{token_bytes}\n") 
+                ''' 
+                .hex是用十六进制表示无法解码的字节，注意：十六进制是字符串类型的
+                例如：
+                token_bytes = b'A'  # 一个字节
+                hex_string = token_bytes.hex()  # 返回 "41"，这里有个双引号看到了吧
+                '''
+
+        # 保存merges，这部分就和上面那块一个套路
+        with open(merges_path, "w", encoding= 'utf-8') as f:
+            for i, (token1, token2) in enumerate (merges): # enumerate是一个内置函数，功能是给可迭代对象添加一个索引，默认从0开始
+                try: # 尝试将字节转换为字符串
+                    token1_str = token1.decode("utf-8")
+                    token2_str = token2.decode("utf-8")
+                    f.write(f"{i}\t{token1_str}\t{token2_str}\n")
+                except UnicodeDecodeError: # 如果遇到无法解码的字节，用十六进制表示
+                    f.write(f"{i}\t{token1.hex()}\t{token2.hex()}\n") 
+
+        """                   
+        上述为什么要把这两个文件保存呢？
+        为了以后重用训练好的模型，否则就要用一次训练一次
+        例如，在对新文本进行编码时，我们需要根据词汇表将文本转换为token id序列，也要根据merges进行词汇中连续字符的合并。
+        而在对token id序列进行解码时，我们需要根据合并历史将token id序列恢复为原始文本。
+        """
