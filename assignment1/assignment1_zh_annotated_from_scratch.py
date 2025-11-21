@@ -235,7 +235,7 @@ def train_bep_tokenizer(input_path:str, vocab_size:int, special_tokens:list[str]
 # ----day2-----
 
 '''
-将词汇表和合并历史保存到文件中
+将词汇表和合并历史保存到文件中，方便后续使用
 '''
 def save_vocab_and_merges(vocab:dict[int, bytes], merges:list[tuple[bytes, bytes]],
                             vocab_path: str, merges_path: str):
@@ -276,3 +276,65 @@ def save_vocab_and_merges(vocab:dict[int, bytes], merges:list[tuple[bytes, bytes
         例如，在对新文本进行编码时，我们需要根据词汇表将文本转换为token id序列，也要根据merges进行词汇中连续字符的合并。
         而在对token id序列进行解码时，我们需要根据合并历史将token id序列恢复为原始文本。
         """
+# --- day3 ---
+'''
+这个函数是通过上述训练好的vocab，对新的文本进行编码，将其转换为token id序列
+'''
+def encode_text(text: str, vocab: dict[int, bytes]) -> list[int]: # 箭头表示函数的返回值类型
+    vocab_rev = {v: k for k, v in vocab.items()} 
+    # _rev是反转的意思，这里是把原来的字典，键值对互换。
+    # for k, v in ... ：遍历每个键值对，将键赋值给 k ，值赋值给 v
+    # {v: k ...} ：创建新字典，使用原来的值 v 作为键，原来的键 k 作为值
+    text_bytes = text.encode('utf-8') # 将文本转换为字节序列，默认使用utf-8编码
+    if text_bytes in vocab_rev: # 如果文本字节序列在词汇表中，直接返回对应的token id
+        return [vocab_rev[text_bytes]] # 如果文本字节序列在词汇表中，直接返回对应的token id
+        
+    result = [] # 创建一个空的列表，用于存储编码后的token id序列
+    # 1. 首先找到所有的空格位置
+    i = 0
+    while i < len(text): # 遍历文本中的每个字符
+        # 跳过空格
+        if text[i].isspace():
+            if b' ' in vocab_rev:
+                result.append(vocab_rev[b' ']) # 如果有空格token，直接添加到结果中
+            i += 1 # 跳过空格
+        else: # 如果不是空格，说明是一个普通字符
+            j = i # 双指针操作，j指向当前连续字符的结束位置
+            while j < len(text) and not text[j].isspace(): # 找到当前连续字符的结束位置
+                j += 1
+            word = text[i:j] # 提取出两个空格间的连续字符串
+            word_bytes = word.encode('utf-8') # 将当前连续字符串转换为字节序列
+
+            # 编码这个单词
+            k = 0
+            while k < len(word_bytes): # 遍历当前连续字节序列的每个字节
+                max_len = 1 # 这是一个默认值，假设当前字节不在词汇表中，就直接编码为单字节
+                best_token = word_bytes[k:k+1] # 从当前位置开始，取最大长度的子字节序列
+
+                # 尝试更长的匹配
+                for length in range(min(4, len(word_bytes) - k), 1 , -1): # 从最大长度4开始，尝试匹配到最短长度1，每次减少1
+                    '''
+                    在BPE分词器中，将最大匹配长度设置为4，是一个经验值：
+                    1. 性能考虑 ：限制最大长度可以减少匹配尝试的次数，提高编码效率。如果不限制长度，每次都要从当前位置到序列末尾尝试所有可能的长度，这会导致时间复杂度大幅增加。
+                    2. 实际应用需求 ：在大多数情况下，BPE合并产生的token长度通常不会太长。尤其是在中文等表意文字中，大多数常用词或字符组合通常在4个字节以内就能表示。
+                    3. 编码效率平衡 ：太短的长度限制（如2或3）可能无法充分利用BPE的合并效果，而太长的限制（如8或更长）则会增加计算开销，且实际收益有限。
+                    4. 内存优化 ：限制尝试的最大长度可以减少内存使用，因为不需要为过长的候选token分配内存。
+                    5. 实际观察经验 ：在实际BPE训练中，统计发现长度超过4的高频合并对相对较少，设置为4是在性能和效果之间的合理平衡。
+                    '''
+                    candidate = word_bytes[k:k+length] # 取当前位置开始，长度为length的子字节序列
+                    if candidate in vocab_rev: # 如果这个子字节序列在词汇表中
+                        max_len = length # 更新最大匹配长度
+                        best_token = candidate # 更新最佳匹配子字节序列
+                        break # 找到最佳匹配后，跳出循环，继续遍历下一个字节
+                # 添加最佳匹配的token id到结果中
+                result.append(vocab_rev[best_token])
+                k += max_len # 移动指针，跳过已经编码的字节
+            
+            i = j # 移动到下一个连续字符的开始位置
+
+    return result
+
+
+
+
+
