@@ -334,7 +334,30 @@ def encode_text(text: str, vocab: dict[int, bytes]) -> list[int]: # 箭头表示
 
     return result
 
+# day4
+'''
+decode_tokens 函数是 BPE 分词器中的解码组件，用于将 token ID 列表转换回原始文本字符串。
+这是编码过程的反向操作，它将模型内部使用的数字表示转换回人类可读的文本。
+'''
+def decode_tokens(token_ids:list[int], vocab: dict[int, bytes]) -> str:
+    result_parts = [] # 创建空列表，用于存储每个解码后的 token 字符串部分
+    for token_id in token_ids:
+        if token_id in vocab:
+            token_bytes = vocab[token_id] # 遍历输入的 token ID 列表，对于每个 ID，检查它是否存在于词汇表中
+            '''
+            尝试使用 UTF-8 编码将字节序列解码为字符串
+            使用 try-except 块捕获可能的 UnicodeDecodeError 异常
+            如果解码失败（例如字节序列不是有效的 UTF-8 编码），则使用问号 '?' 作为替代
+            '''
+            try:
+                token_str = token_bytes.decode('utf-8') # 尝试将字节序列解码为 UTF-8 字符串
+                result_parts.append(token_str)
+            except UnicodeDecodeError:
+                result_parts.append('?') # 如果解码失败，使用问号 '?' 作为替代
 
+    return ''.join(result_parts) # 将所有解码后的字符串部分连接成一个完整的文本字符串返回
+
+    
 
 
 
