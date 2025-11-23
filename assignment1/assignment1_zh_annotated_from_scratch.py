@@ -6,7 +6,11 @@ from tkinter import WORD
 from typing import Any
 
 # 定义一个 Byte-level BPE tokenizer
-def train_bep_tokenizer(input_path:str, vocab_size:int, special_tokens:list[str]):
+def train_bpe_tokenizer(input_path:str, vocab_size:int, special_tokens:list[str]) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
+    '''
+    1. 调用 train_bpe_tokenizer 函数，传入输入文件路径、词汇表大小和特殊 token 列表
+    2. 返回训练好的 BPE 分词器的词汇表和合并规则列表
+    '''
 
     # 定义一个函数，用于将一个unicode字符串转换为一个字节列表
     def encode_unicode_to_bytes(text):
@@ -357,7 +361,268 @@ def decode_tokens(token_ids:list[int], vocab: dict[int, bytes]) -> str:
 
     return ''.join(result_parts) # 将所有解码后的字符串部分连接成一个完整的文本字符串返回
 
+# day 5    
+# 这是一个训练 BPE 分词器的函数，用于从输入文件中学习合并规则和构建词汇表
+def run_train_bpe(
+        input_path: str | os.PathLike, # 输入文件路径，支持字符串或 os.PathLike 对象
+        vocab_size: int, # 词汇表大小，即最终合并后的 token 数量，冒号后面跟着的是数据格式 int
+        special_tokens: list[str], # 特殊 token 列表，如 ['<unk>', '<pad>', '<sos>', '<eos>']
+        **kwargs # 其他参数，如 max_iterations, min_frequency 等
+) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
+    '''
+    1. 调用 train_bpe_tokenizer 函数，传入输入文件路径、词汇表大小和特殊 token 列表
+    2. 返回训练好的 BPE 分词器的词汇表和合并规则列表
+    说白了，这个函数起到的是接口作用，将输入的参数传递给 train_bpe_tokenizer 函数，然后返回训练好的分词器
+    '''
+    import os
+    return train_bpe_tokenizer(str(input_path), vocab_size, special_tokens)
+
+# 这是一个工厂函数，用于创建 BPE 分词器实例，创建实例是指根据传入的词汇表、合并规则和特殊 token 列表，创建一个 BPE_Tokenizer 类的实例
+# 创建这个实例的目的是为了在后续的编码和解码过程中使用这个实例
+def get_tokenizer( 
+    vocab: dict[int, bytes],
+    merges: list[tuple[bytes, bytes]],
+    special_tokens: list[str] | None = None,
+) -> Any:
+    from typing import Any
+    '''
+    类的主要特点 ：
+    1. 数据和行为的封装 ：类可以同时包含数据（属性）和操作这些数据的代码（方法）
+    2. 创建实例 ：通过类可以创建多个实例（对象），每个实例拥有类定义的属性和方法
+    3. 继承和多态 ：支持面向对象的继承和多态特性
+    4. 生命周期 ：类定义只执行一次，但可以创建多个实例
+
+    函数（Function）
+    基本定义 ：
+    函数是一段可重用的代码块，用于执行特定任务并可能返回结果。它不包含数据，只包含操作逻辑。
+    主要特点 ：
+    1. 单一职责 ：通常负责执行单一任务
+    2. 数据独立性 ：函数通过参数接收数据，通过返回值传递结果
+    3. 无状态性 ：函数执行完毕后，其内部的局部变量会被销毁
+    4. 可重用性 ：可以在程序的不同位置被多次调用
+
+    类的实例化
+    基本定义 ：
+    实例化是指根据类的定义，创建一个类的实例（对象）的过程。每个实例都有自己的状态（属性值），但共享类的行为（方法）。
+    主要特点 ：
+    1. 创建对象 ：通过类可以创建多个实例（对象），每个实例都是类的一个具体实例
+    2. 状态独立性 ：每个实例的属性值是独立的，互不干扰
+    3. 行为共享 ：所有实例共享类的方法，即可以调用类的方法来操作实例的状态
+    4. 生命周期 ：每个实例的生命周期独立，当实例不再被引用时，会被垃圾回收器自动销毁
+
+    init的使用：
+    1. 初始化属性 ：在类的实例化过程中，init 方法会被自动调用，用于初始化实例的属性
+    2. 接收参数 ：init 方法可以接收参数，用于初始化实例的属性值
+    3. 数据封装 ：通过 init 方法，可以将数据封装在实例中，实现数据和行为的封装
+    '''
+    class BPE_Tokenizer: # 这是一个 BPE 分词器类，用于编码和解码文本
+        def __init__(self, vocab, merges, special_tokens=None): # 初始化方法，接收词汇表、合并规则和特殊 token 列表
+            self.vocab = vocab # 这是为了避免直接操作传入的数据
+            self.merges = merges 
+            self.special_tokens = special_tokens or [] # 特殊 token 列表，如 ['<unk>', '<pad>', '<sos>', '<eos>']
+            self.vocab_rev = {v:k for k, v in vocab.items()}  # 反转词汇表，将 token 映射到对应的索引
+            self.special_token_bytes = {token.encode('utf-8'): token for token in self.special_tokens} # 构建字典
+
+            import re # 导入正则表达式模块，用于处理特殊 token 中的特殊字符
+            if self.special_tokens:
+                sorted_tokens = sorted(self.special_tokens, key=len, reverse=True) # 对特殊 token 列表按长度降序排序，就是从长到短
+                escaped_tokens = [re.escape(token) for token in sorted_tokens] 
+                # 对每个特殊 token 进行正则表达式转义，防止特殊字符干扰匹配
+                # 核心逻辑是：部分字符（如引号 "、反斜杠 \、换行符 \n 等）在文本存储、传输或模型解析时，
+                # 可能被误识别为语法符号（而非普通文本内容），导致解析错误或语义偏差。
+                # 通过 “转义”（通常是在特殊字符前添加转义符，如 \" 表示普通引号、\\ 表示普通反斜杠），
+                # 将这些字符标记为 “普通文本内容”，再将转义后的文本切分为 token，就得到了 escaped_tokens。
+                self.special_token_pattern = re.compile('|'.join(escaped_tokens)) 
+                '''
+                ### 代码功能分析
+                1. escaped_tokens ：
+                
+                - 这是一个已转义的特殊标记列表，其中每个标记中的正则表达式特殊字符（如 . , * , + 等）都已被正确转义，确保它们在正则表达式中被视为普通字符。
+                2. '|'.join(escaped_tokens) ：
+                
+                - 使用字符串方法 join() 将转义后的标记列表连接成一个字符串
+                - '|' 是连接分隔符，表示正则表达式中的「或」操作
+                - 例如：如果 escaped_tokens = ['<start>', '<end>'] ，那么结果就是 <start>|<end>
+                - 这个表达式的含义是「匹配 <start> 或者 <end> 」
+                3. re.compile(...) ：
+                
+                - 使用 Python 的 re 模块中的 compile() 函数
+                - 将字符串形式的正则表达式编译成一个正则表达式对象，这可以提高重复使用时的效率
+                - 编译后的正则对象可以被多次使用，而不需要每次重新解析正则表达式字符串
+                4. self.special_token_pattern = ... ：
+                
+                - 将编译好的正则表达式对象保存为类实例的属性
+                - 使用 self. 前缀使其成为实例变量，可在类的其他方法中访问
+                '''
+            else:
+                self.special_token_pattern = None
+
+        def encode(self, text: str) -> list[int]:
+            text_bytes = text.encode('utf-8')
+
+            if text_bytes in self.vocab_rev:
+                return [self.vocab_rev[text_bytes]] # 查字典，返回 token ID
+
+            if self.special_token_pattern:
+                special_matches = list(self.special_token_pattern.finditer(text))
+                '''
+                ### 代码功能分析
+                1. self.special_token_pattern ：
+                
+                - 这是之前创建的编译后的正则表达式对象
+                - 它用于匹配预定义的特殊标记（如 <bos> , <eos> , <pad> 等）
+                2. .finditer(text) ：
+                
+                - 这是正则表达式对象的一个方法，用于在 text 中查找所有与模式匹配的子串
+                - finditer() 方法返回一个 迭代器 ，迭代器中的每个元素都是一个 匹配对象（match object）
+                - 每个匹配对象包含了匹配的详细信息，如匹配到的文本、起始位置、结束位置等
+                3. list(...) ：
+                
+                - 将迭代器转换为列表，这样可以立即获取所有匹配结果并存储在内存中
+                - 转换为列表后可以更方便地对匹配结果进行索引、排序或多次遍历操作
+                '''
+                if special_matches: # 如果存在特殊 token 匹配
+                    result = [] # 初始化结果列表，用于存储编码后的 token ID
+                    last_end = 0 # 初始化最后一个匹配结束的位置，从第一个字符开始
+
+                    for match in special_matches: # 遍历所有特殊 token 匹配
+                        if match.start() > last_end: # 如果当前匹配开始位置大于最后一个匹配结束位置
+                            result.extend(self._encode_bytes(text[last_end:match.start()].encode('utf-8'))) # 编码并添加普通文本部分到结果中
+                            '''
+                            ### 代码分解与分析
+                            1. text[last_end:match.start()] ：
+                            
+                            - 这是一个字符串切片操作，提取两个位置之间的文本
+                            - last_end ：上一个特殊标记或文本块的结束位置
+                            - match.start() ：当前匹配到的特殊标记的开始位置
+                            - 整体含义：提取从上一个处理点到当前特殊标记之间的 普通文本部分
+                            2. .encode('utf-8') ：
+                            
+                            - 将提取的普通文本字符串转换为 UTF-8 编码的字节序列
+                            - 这一步是必要的，因为 BPE 算法通常在字节级别上操作
+                            - 确保文本以统一的字节表示形式进行处理，特别是对于多语言字符
+                            3. self._encode_bytes(...) ：
+                            
+                            - 调用类的私有方法 _encode_bytes
+                            - 这个方法负责将字节序列编码为 token ID 列表
+                            - 内部可能使用 BPE 算法查找子词并映射到对应的 token ID
+                            4. result.extend(...) ：
+                            
+                            - 将编码得到的 token ID 列表添加到最终结果列表 result 中
+                            - 使用 extend() 方法而不是 append() ，因为 _encode_bytes 返回的是一个列表，我们需要将列表中的每个元素添加到结果中
+                            '''
+                        special_token = match.group(0) # 获取当前匹配的特殊 token 字符串
+                        '''
+                        1. match ：
+   
+                        - 这是一个正则表达式匹配对象（match object）
+                        - 它是通过 self.special_token_pattern.finditer(text) 方法返回的
+                        - 每个匹配对象包含了关于匹配结果的详细信息
+                        2. .group(0) ：
+                        
+                        - 这是匹配对象的一个方法，用于获取匹配到的文本内容
+                        - 参数 0 表示获取 完整的匹配字符串 （整个匹配项）
+                        - 对于简单的正则表达式匹配，通常只需要 group(0)
+                        - 如果正则表达式中包含捕获组（用括号括起来的部分），可以通过 group(1) , group(2) 等获取各个捕获组的内容
+                        3. special_token = ... ：
+                        
+                        - 将获取到的特殊标记字符串赋值给变量 special_token
+                        - 便于后续处理，如查找对应的 token ID
+                        '''
+                        special_token_bytes = special_token.encode('utf-8') # 将特殊 token 字符串编码为字节序列
+
+                        if special_token_bytes in self.vocab_rev: 
+                            result.append(self.vocab_rev[special_token_bytes]) # 如果特殊 token 存在于词汇表中，将其对应的 token ID 添加到结果中
+                        else:
+                            result.extend(self._encode_bytes(special_token_bytes)) # 如果特殊 token 不存在于词汇表中，将未知 token ID 添加到结果中
+                            '''
+                            - 当使用 result.append(token_id) 时：
+                                - 通常用于添加单个 token ID（整数）
+                                - 例如处理特殊标记时，直接映射到单一 token ID
+                            - 当使用 result.extend(self._encode_bytes(...)) 时：
+                                - 因为 _encode_bytes() 返回的是 token ID 列表
+                                - 使用 extend() 可以将这个列表中的所有 token ID 逐个添加到结果中
+                                - 避免在结果列表中嵌套子列表
+                            '''
+                        last_end = match.end() # 更新最后一个匹配结束的位置，指向当前匹配结束位置
+                        '''
+                        .end() ：
+                            - 这是匹配对象的一个方法，返回匹配到的文本在原始字符串中的 结束位置（索引值）
+                            - 结束位置是匹配文本之后的第一个字符的索引
+                        '''
+
+                    if last_end < len(text):
+                        result.extend(self._encode_bytes(text[last_end:].encode('utf-8')))
+                    return result
+
+            return self._encode_bytes(text_bytes)
+
+        # 在Python中，以下划线 _ 开头的方法名（如 _encode_bytes ）表示这是一个 私有方法 或 内部方法 。
+        # 在提供的 BPE_Tokenizer 类中， _encode_bytes 方法以下划线开头，表明：
+        # - 它是类内部实现细节
+        # - 主要被类的其他公共方法（如 encode_text 等）调用
+        # - 不建议在使用该分词器时直接调用这个方法
+        def _encode_bytes(self, text_bytes: bytes) -> list[int]:
+            result = []
+            i = 0
+            while i < len(text_bytes): 
+                if text_bytes[i:i+1] == b' ':
+                    if b' ' in self.vocab_rev:
+                        result.append(self.vocab_rev[b' '])
+                    i += 1
+                else:
+                    start = i
+                    while i < len(text_bytes) and text_bytes[i:i+1] != b' ':
+                        i += 1
+
+                    chunk = text_bytes[start:i] # 从 start 到 i-1 的子字符串，不包括 i 本身
+                    j = 0
+                    while j < len(chunk): 
+                        matched = False
+                        for length in range(min(len(chunk) - j, 20),0 ,-1): # 从长到短尝试匹配
+                            candidate = chunk[j: j+length] # 从 j 开始，长度为 length 的子字符串
+                            if candidate in self.vocab_rev: 
+                                result.append(self.vocab_rev[candidate]) 
+                                j += length
+                                matched = True
+                                break
+                        if not matched: # 如果没有匹配到任何长度的子字符串
+                            if chunk[j:j+1] in self.vocab_rev:
+                                result.append(self.vocab_rev[chunk[j:j+1]]) # 如果单个字符存在于词汇表中，将其对应的 token ID 添加到结果中
+                            else:
+                                pass # 如果单个字符不存在于词汇表中，保持不变
+                            j += 1
+            return result
+
+        def decode(self, token_ids:list[int]) -> str: # 将 token ID 列表解码为文本字符串
+            result_parts = [] 
+            for token_id in token_ids: 
+                if token_id in self.vocab:
+                    token_bytes = self.vocab[token_id]
+                    try:
+                        token_str = token_bytes.decode('utf-8')
+                        result_parts.append(token_str)
+                    except UnicodeDecodeError:
+                        # 对于无法解码的字节，使用替换字符
+                        result_parts.append('�')
+            return ''.join(result_parts) 
+            '''
+            '''
+
+        def encode_iterable(self, iterable) -> list[int]:
+            text = ''.join(iterable) # ''.join(iterable) 使用空字符串作为连接符，将可迭代对象中的所有元素按顺序连接成一个完整的字符串
+            for token_id in self.encode(text):
+                yield token_id 
+                '''
+                - yield 是 Python 中用于创建 生成器函数 的关键字
+                - 当函数包含 yield 时，它不再是普通函数，而是变成了一个生成器函数
+                - 生成器函数调用时不会立即执行函数体，而是返回一个生成器对象
+                - 当迭代这个生成器对象时，函数会开始执行，直到遇到 yield 语句
+                - 遇到 yield 时，函数会暂停执行，并将 token_id 的值作为当前迭代的结果返回
+                - 下次迭代时，函数会从上一次暂停的位置继续执行
+                '''
     
+    return BPE_Tokenizer(vocab, merges, special_tokens)
 
 
 
