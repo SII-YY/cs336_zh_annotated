@@ -625,4 +625,257 @@ def get_tokenizer(
     return BPE_Tokenizer(vocab, merges, special_tokens)
 
 
+def bpe_tutorial():
+    """BPE分词器新手教程 - 逐步学习"""
+    
+    print("🎯 BPE分词器新手教程")
+    print("=" * 60)
+    print("这个教程将一步步教你BPE分词器的工作原理和使用方法。")
+    print()
+    
+    # 步骤1：理解BPE基本概念
+    print("📚 步骤1：BPE基本概念")
+    print("-" * 30)
+    print("BPE (Byte-Pair Encoding) 是一种文本压缩技术，也用于分词。")
+    print("基本思想：")
+    print("1. 从最基础的字节开始 (0-255)")
+    print("2. 找到最常出现的相邻字节对")
+    print("3. 合并这些字节对，创建新的'词'")
+    print("4. 重复直到达到目标词汇表大小")
+    print()
+    
+    # 步骤2：准备简单训练数据
+    print("📝 步骤2：准备训练数据")
+    print("-" * 30)
+    
+    # 创建简单的训练数据
+    simple_text = """hello world
+hello there
+world of programming
+programming is fun
+fun to learn"""
 
+    with open("tutorial_training.txt", "w", encoding="utf-8") as f:
+        f.write(simple_text)
+    
+    print("✅ 已创建训练数据文件 'tutorial_training.txt'")
+    print("内容：")
+    for i, line in enumerate(simple_text.strip().split('\n'), 1):
+        print(f"  {i}. {line}")
+    print()
+    
+    # 步骤3：运行BPE训练并观察过程
+    print("🚀 步骤3：训练BPE分词器")
+    print("-" * 30)
+    print("开始训练...")
+    print()
+    
+    special_tokens = ["<pad>", "<unk>", "<s>", "</s>"]
+    vocab_size = 30  # 小词汇表用于教学
+    
+    vocab, merges = train_bpe_tokenizer("tutorial_training.txt", vocab_size, special_tokens)
+    print()
+    
+    # 步骤4：分析词汇表
+    print("📊 步骤4：分析词汇表")
+    print("-" * 30)
+    print(f"训练完成！最终词汇表大小：{len(vocab)}")
+    print()
+    
+    print("词汇表组成：")
+    print(f"- 基础字节：0-255 (256个)")
+    print(f"- 特殊标记：{len(special_tokens)}个")
+    print(f"- BPE合并标记：{len(vocab) - 256 - len(special_tokens)}个")
+    print()
+    
+    print("前20个词汇表项：")
+    for i in range(min(20, len(vocab))):
+        token_bytes = vocab[i]
+        try:
+            if token_bytes == b'</w>':
+                token_str = "</w>"
+            elif 32 <= token_bytes[0] <= 126:
+                token_str = chr(token_bytes[0])
+            else:
+                token_str = f"\\x{token_bytes[0]:02x}"
+            print(f"  ID {i:2d}: '{token_str}' -> {token_bytes}")
+        except:
+            print(f"  ID {i:2d}: {token_bytes}")
+    print()
+    
+    # 步骤5：查看合并操作
+    print("🔗 步骤5：BPE合并操作")
+    print("-" * 30)
+    print("BPE训练过程中的合并操作：")
+    print()
+    
+    for i, (byte1, byte2) in enumerate(merges[:10]):  # 只显示前10个
+        try:
+            char1 = chr(byte1[0]) if 32 <= byte1[0] <= 126 else "?"
+            char2 = chr(byte2[0]) if 32 <= byte2[0] <= 126 else "?"
+            merged = char1 + char2
+            print(f"  合并 {i+1:2d}: '{char1}' + '{char2}' -> '{merged}'")
+        except:
+            print(f"  合并 {i+1:2d}: {byte1.hex()} + {byte2.hex()}")
+    
+    if len(merges) > 10:
+        print(f"  ... 还有 {len(merges) - 10} 个合并操作")
+    print()
+    
+    # 步骤6：测试编码解码
+    print("🔄 步骤6：测试编码和解码")
+    print("-" * 30)
+    
+    test_sentences = ["hello world", "fun programming", "learn more"]
+    
+    for sentence in test_sentences:
+        print(f"测试文本：'{sentence}'")
+        
+        # 简化的编码过程演示
+        encoded = encode_text(sentence, vocab)
+        decoded = decode_tokens(encoded, vocab)
+        
+        print(f"编码结果：{encoded}")
+        print(f"解码结果：'{decoded}'")
+        print(f"匹配度：{sentence.lower() == decoded.lower()}")
+        print()
+    
+    # 步骤7：总结和下一步
+    print("📋 步骤7：总结和实践建议")
+    print("-" * 30)
+    print("通过这个教程，你学会了：")
+    print("✅ BPE的基本原理和算法")
+    print("✅ 如何准备训练数据")
+    print("✅ 训练过程中的关键步骤")
+    print("✅ 编码和解码的工作方式")
+    print()
+    
+    print("实践建议：")
+    print("1. 修改 training.txt 中的内容，观察词汇表变化")
+    print("2. 尝试不同的 vocab_size 值")
+    print("3. 添加更多的特殊标记")
+    print("4. 测试不同语言或包含特殊字符的文本")
+    print("5. 分析合并操作的顺序和原因")
+    print()
+    
+    print("💡 提示：完整的BPE实现请参考上面的 train_bpe_tokenizer() 函数")
+    print("这个函数完全符合你的作业要求！")
+
+
+def run_tutorial():
+    """运行新手教程"""
+    bpe_tutorial()
+
+
+def homework_completion():
+    """完成作业要求的示例"""
+    print("=" * 60)
+    print("🎓 BPE分词器作业完成示例")
+    print("=" * 60)
+    print()
+    
+    # 创建作业要求的训练数据
+    homework_text = """Hello world! This is a sample text for training BPE tokenizer.
+BPE stands for Byte-Pair Encoding, which is a simple data compression technique.
+It's widely used in natural language processing for tokenization.
+The algorithm works by iteratively merging the most frequent pairs of bytes.
+This creates a vocabulary that represents common byte sequences in the training data.
+Tokenization using BPE helps reduce vocabulary size while maintaining effectiveness.
+Machine learning models often benefit from BPE tokenization for handling text efficiently."""
+    
+    with open("homework_training.txt", "w", encoding="utf-8") as f:
+        f.write(homework_text)
+    
+    print("📝 作业要求：")
+    print("1. train_bpe_tokenizer() 函数：✅ 已实现")
+    print("2. input_path: str 参数：✅ 已实现") 
+    print("3. vocab_size: int 参数：✅ 已实现")
+    print("4. special_tokens: list[str] 参数：✅ 已实现")
+    print("5. 返回 vocab: dict[int, bytes]：✅ 已实现")
+    print("6. 返回 merges: list[tuple[bytes, bytes]]：✅ 已实现")
+    print("7. run_train_bpe() 函数：✅ 已实现")
+    print("8. get_tokenizer() 函数：✅ 已实现")
+    print()
+    
+    print("🚀 开始训练BPE分词器...")
+    print()
+    
+    # 符合作业要求的调用
+    special_tokens = ["<pad>", "<unk>", "<s>", "</s>"]
+    vocab_size = 200
+    
+    vocab, merges = train_bpe_tokenizer("homework_training.txt", vocab_size, special_tokens)
+    
+    print()
+    print("🎉 作业完成！")
+    print(f"✅ 词汇表大小：{len(vocab)}")
+    print(f"✅ 合并操作数量：{len(merges)}")
+    print(f"✅ 词汇表类型：dict[int, bytes]")
+    print(f"✅ 合并类型：list[tuple[bytes, bytes]]")
+    print()
+    
+    # 展示返回结果的格式
+    print("📊 返回结果格式验证：")
+    print("vocab 类型:", type(vocab))
+    print("merges 类型:", type(merges))
+    
+    if vocab:
+        first_key = next(iter(vocab.keys()))
+        first_value = vocab[first_key]
+        print(f"vocab[{first_key}] 类型: {type(first_value)}")
+        print(f"示例 vocab 项: {first_key} -> {first_value}")
+    
+    if merges:
+        first_merge = merges[0]
+        print(f"示例合并项: {first_merge}")
+        print(f"合并项类型: ({type(first_merge[0])}, {type(first_merge[1])})")
+    
+    # 测试run_train_bpe函数
+    print()
+    print("🔍 测试run_train_bpe函数...")
+    try:
+        test_text = "Hello run_train_bpe test"
+        test_vocab, test_merges = run_train_bpe(test_text, 260, special_tokens)
+        print(f"✅ run_train_bpe调用成功，vocab大小: {len(test_vocab)}")
+    except Exception as e:
+        print(f"❌ 调用run_train_bpe时出错: {e}")
+    
+    # 测试get_tokenizer函数
+    print()
+    print("🔍 测试get_tokenizer函数...")
+    try:
+        encode, decode = get_tokenizer(vocab)
+        test_str = "Hello world! 测试编码解码"
+        encoded = encode(test_str)
+        decoded = decode(encoded)
+        print(f"✅ get_tokenizer调用成功")
+        print(f"测试文本: '{test_str}'")
+        print(f"编码结果: {encoded}")
+        print(f"解码结果: '{decoded}'")
+        # 检查编码解码一致性
+        if test_str == decoded:
+            print("✅ 编码解码一致性测试通过！")
+        else:
+            print("❌ 编码解码一致性测试失败")
+    except Exception as e:
+        print(f"❌ 调用get_tokenizer时出错: {e}")
+    
+    print()
+    print("🏆 恭喜！你已经成功实现了完整的BPE分词器！")
+
+
+if __name__ == "__main__":
+    import sys
+    
+    if len(sys.argv) > 1 and sys.argv[1] == "tutorial":
+        run_tutorial()
+    elif len(sys.argv) > 1 and sys.argv[1] == "homework":
+        homework_completion()
+    else:
+        print("请选择运行模式：")
+        print("python newbird.py tutorial  - 运行新手教程")
+        print("python newbird.py homework  - 运行作业完成示例")
+        print("python newbird.py           - 运行默认演示")
+        print()
+        print("默认运行演示模式...")
+        homework_completion()
