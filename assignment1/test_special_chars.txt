@@ -1,0 +1,15 @@
+这是一个包含特殊字符和符号的测试文件！@#$%^&*()_+-=[]{}\|;':",.<>/?
+1234567890 数字和符号混合：100% 完成，得分 9.5/10
+URL 地址示例：https://example.com/path?query=value#fragment
+Email 地址：test.user@example-domain.com
+日期格式：2023-12-25, 25/12/2023, 12.25.2023
+时间格式：14:30:45, 2:30 PM
+代码片段：print("Hello, World!"); const x = 10;
+数学公式：E=mc², a²+b²=c²
+Emoji表情符号：😊😎👍❤️🔥
+HTML标签：<div class="container">Hello</div>
+XML结构：<root><item>value</item></root>
+Markdown语法：# 标题 **粗体** *斜体*
+特殊Unicode字符：© ® ™ € £ ¥ ¢
+混合情况：用户ID_123@#$%^&*()
+这个测试文件包含了各种特殊字符，适合用于测试BPE分词器的鲁棒性。

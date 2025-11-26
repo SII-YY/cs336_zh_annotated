@@ -1,0 +1,10 @@
+这是一个中英文混合的测试文件。This is a test file with Chinese and English mixed content.
+BPE分词器需要能够正确处理多语言文本，包括中文汉字和英文字母。
+中文是一种象形文字，而英文是一种拼音文字，它们在tokenization时需要不同的处理策略。
+在自然语言处理(Natural Language Processing, NLP)领域，多语言支持是一个重要的挑战。
+Byte Pair Encoding (BPE) 算法可以有效地处理多语言场景，因为它基于字节级别进行操作。
+对于中文文本，通常每个汉字会被视为一个独立的token，而对于英文文本，则会通过BPE合并生成子词单元。
+混合文本的tokenization对于机器翻译、多语言模型等应用非常重要。
+例如，"机器学习 machine learning" 这样的短语在多语言环境中很常见。
+通过训练包含多语言内容的语料库，BPE分词器可以学习到不同语言的特点和规则。
+这个测试文件包含了各种中英文混合的句子，适合用于训练多语言BPE分词器。

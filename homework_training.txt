@@ -1,0 +1,7 @@
+Hello world! This is a sample text for training BPE tokenizer.
+BPE stands for Byte-Pair Encoding, which is a simple data compression technique.
+It's widely used in natural language processing for tokenization.
+The algorithm works by iteratively merging the most frequent pairs of bytes.
+This creates a vocabulary that represents common byte sequences in the training data.
+Tokenization using BPE helps reduce vocabulary size while maintaining effectiveness.
+Machine learning models often benefit from BPE tokenization for handling text efficiently.
