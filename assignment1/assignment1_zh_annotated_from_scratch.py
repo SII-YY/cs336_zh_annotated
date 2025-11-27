@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import os
 from hmac import new
 from pydoc import text
 from tkinter import WORD
-from typing import Any, Union, Optional
+from typing import Any
 
 # 定义一个 Byte-level BPE tokenizer
 def train_bpe_tokenizer(input_path:str, vocab_size:int, special_tokens:list[str]) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
@@ -365,7 +364,7 @@ def decode_tokens(token_ids:list[int], vocab: dict[int, bytes]) -> str:
 # day 5    
 # 这是一个训练 BPE 分词器的函数，用于从输入文件中学习合并规则和构建词汇表
 def run_train_bpe(
-        input_path: Union[str, os.PathLike], # 输入文件路径，支持字符串或 os.PathLike 对象
+        input_path: str | os.PathLike, # 输入文件路径，支持字符串或 os.PathLike 对象
         vocab_size: int, # 词汇表大小，即最终合并后的 token 数量，冒号后面跟着的是数据格式 int
         special_tokens: list[str], # 特殊 token 列表，如 ['<unk>', '<pad>', '<sos>', '<eos>']
         **kwargs # 其他参数，如 max_iterations, min_frequency 等
@@ -383,7 +382,7 @@ def run_train_bpe(
 def get_tokenizer( 
     vocab: dict[int, bytes],
     merges: list[tuple[bytes, bytes]],
-    special_tokens: Optional[list[str]] = None,
+    special_tokens: list[str] | None = None,
 ) -> Any:
     from typing import Any
     '''
