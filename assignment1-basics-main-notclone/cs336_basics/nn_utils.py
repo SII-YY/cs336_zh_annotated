@@ -223,12 +223,19 @@ def softmax(in_features: Tensor, dim: int) -> Tensor:
 def cross_entropy(inputs: Tensor, targets: Tensor) -> Tensor:
     """
     实现交叉熵损失函数
+    
+    参数:
+        inputs: 预测logits，形状为 (batch_size, num_classes)
+        targets: 目标标签，形状为 (batch_size,)
+    
+    返回:
+        交叉熵损失（标量）
     """
     # 为了数值稳定性，减去每行的最大值
     max_vals = torch.max(inputs, dim=1, keepdim=True)[0]
     inputs_stable = inputs - max_vals
     exp_logits = torch.exp(inputs_stable)
-    log_sum_exp = torch.log(torch.sum(exp_logits, dim=1))
+    log_sum_exp = torch.log(torch.sum(exp_logits, dim=1, keepdim=True))
     log_probs = inputs_stable - log_sum_exp
     # 选择正确类别的log概率
     correct_log_probs = log_probs[range(inputs.size(0)), targets]
