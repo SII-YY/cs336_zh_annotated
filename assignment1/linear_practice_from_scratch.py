@@ -166,3 +166,13 @@ GPT-3: 12288维（12K）
 两者配合：完成从文本到数学向量的完整转换
 维度一致性：分词器词汇表大小 = 嵌入层输入维度
 '''
+
+"""
+SwiGLU激活函数，结合了Glu和Swish激活函数的优点
+Glu：Gating Mechanism + Linear Unit 
+Swish：Self-gating activation function
+"""
+class SwiGLU(torch.nn.Module):
+    def __init__(self, embed_dim: int, hidden_dim: Optional[int] = None):
+        super().__init__()
+
