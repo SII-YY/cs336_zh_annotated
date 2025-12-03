@@ -175,4 +175,19 @@ Swish：Self-gating activation function
 class SwiGLU(torch.nn.Module):
     def __init__(self, embed_dim: int, hidden_dim: Optional[int] = None):
         super().__init__()
+        self.hidden_dim = hidden_dim if hidden_dim is not None else embed_dim * 4 # 默认隐藏层维度是嵌入维度的4倍
+        self.w_gate = torch.nn.Parameter(torch.randn(embed_dim, self.hidden_dim)) # 隐藏层权重
+        self.w_proj = torch.nn.Parameter(torch.randn(embed_dim, self.hidden_dim)) # 输出层权重
+        self.b_gate = torch.nn.Parameter(torch.zeros(self.hidden_dim)) # 隐藏层偏置
+        self.b_proj = torch.nn.Parameter(torch.zeros(self.hidden_dim)) # 输出层偏置
+        
+        # 初始化权重
+        torch.nn.init.kaiming_uniform_(self.w_gate, a=math.sqrt(5)) # 
+        torch.nn.init.kaiming_uniform_(self.w_proj, a=math.sqrt(5)) # 输出层权重
+    # 前向传播
+    def forward(self, x: Tensor) -> Tensor:
+        gate = F.linear(x, self.w_gate, self.b_gate) # 隐藏层计算
+        gate = F.silu(gate) # 隐藏层激活
+        proj = F.linear(x, self.w_proj, self.b_proj) # 输出层计算
+        return gate * proj # 输出结果
 
